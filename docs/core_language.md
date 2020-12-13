@@ -1,11 +1,11 @@
 # Core Language
 
-There are three main features you need to be comfortable with to use Ansa:
+There are three main features you need to be comfortable with to use ANSA:
 **Values**, **References**, and **Functions**.
 
 ## Values
 
-In Ansa, the most basic building blocks are values. This includes things such
+In ANSA, the most basic building blocks are values. This includes things such
 as `23`, `35.5` and `"Hello there!"`.
 
 Let's start by looking at the numeric types.

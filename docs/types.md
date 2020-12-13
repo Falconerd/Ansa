@@ -1,6 +1,6 @@
 # Types
 
-The type system in Ansa allows you to build custom types from both primitives
+The type system in ANSA allows you to build custom types from both primitives
 and other custom types.
 
 ```
