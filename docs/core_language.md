@@ -1,7 +1,7 @@
 # Core Language
 
 There are three main features you need to be comfortable with to use Ansa:
-**Values**, **Pointers**, and **Functions**.
+**Values**, **References**, and **Functions**.
 
 ## Values
 
@@ -44,11 +44,11 @@ the smallest size which can fit the variable.
 | `u8`   | 0   | 255 |
 | `u16`  | 0   | 35 565 |
 | `u32`  | 0   | 4 294 967 295 |
-| `u64`  | 0   | 2<sup>63</sup>-1 |
+| `u64`  | 0   | 2^63 - 1 |
 | `i8`   | -128 | 127 |
 | `i16`  | -32 768 | 32 767 |
 | `i32`  | -2 147 483 648 | 2 147 483 647 |
-| `i64`  | -2<sup>63</sup> | 2<sup>63</sup>-1 |
+| `i64`  | -2^63 | 2^63 - 1 |
 
 
 Floating point numbers follow the IEEE 754 standard. Due to precision issues,
@@ -109,53 +109,85 @@ a `u64`.
 someChar := "a"
 
 Type(someChar) // => "u8"
-Print("%", someChar) // => a
-Print("%d", someChar) // => 61
+Print(someChar) // => a
+Print(someChar) // => 61
 Size(someChar) // => 8
 
 twoChars := "ab"
 
-Print("%", twoChars) // => ab
-Print("%", twoChars.length) // => 2
+Print(twoChars) // => ab
+Print(twoChars.length) // => 2
 Type(twoChars.length) // => "u64"
 Size(twoChars) // => 80
 ```
 
-## Pointers
+## References
 
-Pointers like values but their type is always `u64` and the data they hold is
-the memory address of a different value.
+References are special values but rather than holding a number or string, they
+hold the memory address of a different value.
 
-To denote a value as a pointer, the symbol `*` is used as a suffix to the type.
+In order to understand references, you need to know a little bit about how
+values are stored in memory.
 
-To take the memory address of an existing value, the symbol `&` is used.
+Here we have a representation of 4 "blocks" of memory. Let us assume that each
+block is 32-bit, enough to hold a standard integer or float.
 
-```
-someNumber := 42
-u8* somePointer = &someNumber
-```
-
-Pointers can also have their type inferred by the compiler.
+We will also assume that the memory address of A starts at 100, to simplify
+things.
 
 ```
-somePointer := &someNumber
-Type(somePointer) // => "u8*"
+        v-132           v-196
+---------------------------------
+|   A   |   B   |   C   |   D   |
+---------------------------------
+^-100           ^-164
 ```
 
-To retrieve or modify the data inside a value, it can be "dereferenced" with
-the `*` symbol.
+As you can see, each block increases the memory address number by 32, as they
+are 32-bit blocks.
+
+This is in essence how all memory in a computer works. When we declare a value,
+the value is stored into one of these blocks, and then we get a reference to
+the "address" of the block.
+
+When we call on the value normally, it gives us the data inside, but if we use
+the special `&` syntax in front of the name, then we can get the address
+instead.
 
 ```
 myValue := 42
-myPointer := &myValue
 
-Print(*myPointer) // => 42
+---------------------------------
+|   A   |   B   |   C   |   D   |
+---------------------------------
+|       |  42   |       |       |
+---------------------------------
 
-*myPointer = 23
-
-Print(*myPointer) // => 23
+Print(&myValue) // => 132
 ```
 
+References can be declared like other values in order to pass them around. For
+this, the special `*` syntax is used after the type in conjunction with the
+`&` syntax in front of the value name.
+
+```
+i32 myValue = 42
+i32* myRef = &myValue
+
+Print(&myValue) // => 150 (for example)
+Print(myRef) // => 150
+
+```
+
+Using the reference, the value can be obtained by once again using the `*`
+syntax, but this time in front of the value name.
+
+```
+i32 myValue = 42
+i32* myRef = &myValue
+
+Print(*myRef) // => 42
+```
 
 ## Functions
 
@@ -182,17 +214,4 @@ Main() {
 	Greeting("Sarah")
 }
 // => "Hello, Sarah!"
-```
-
-## Arrays
-
-Arrays hold a sequence of things of the same type and are denoted by brackets.
-
-Like Strings, they have access to a length value which is of type `u64`.
-
-```
-primes := [2, 3, 5, 7, 11, 13]
-
-Type(primes) // => "u8[]"
-Print(primes.length) // => 6
 ```
