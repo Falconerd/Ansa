@@ -1,11 +1,11 @@
 # Core Language
 
-There are three main features you need to be comfortable with to use ANSA:
+There are three main features you need to be comfortable with to use Ansa:
 **Values**, **References**, and **Functions**.
 
 ## Values
 
-In ANSA, the most basic building blocks are values. This includes things such
+In Ansa, the most basic building blocks are values. This includes things such
 as `23`, `35.5` and `"Hello there!"`.
 
 Let's start by looking at the numeric types.
@@ -13,9 +13,9 @@ Let's start by looking at the numeric types.
 ### Numbers
 
 ```
-u someNumber = 32
-i anotherOne = -1
-f andAnother = 35.5
+u some_number = 32;
+i another_one = -1;
+f and_another = 35.5;
 ```
 
 The prefixes here are telling the compiler what type of number these are.
@@ -29,7 +29,7 @@ You can let the compiler figure out (infer) the type by using the special `:=`
 syntax.
 
 ```
-whatAmI := 42
+what_am_i := 42;
 ```
 
 In this instance, the compiler will set the type to `u8`. Let's go over what
@@ -62,13 +62,13 @@ there are no floating point numbers smaller than 32 bits.
 Let us take the following example:
 
 ```
-howBig := 35000
+how_big := 35000;
 ```
 
-Since most of us are used to typing `int howBig = 35000`, we may expect that
+Since most of us are used to typing `int how_big = 35000`, we may expect that
 this would be a signed integer type. However, that would be incorrect.
 
-The type of the variable `howBig` would be `u16`.
+The type of the variable `how_big` would be `u16`.
 
 By default the compiler will use unsigned integers. If it were signed integers,
 then this value would have a type of `i32`, which is double the size.
@@ -76,27 +76,137 @@ then this value would have a type of `i32`, which is double the size.
 If you need a variable to go below 0, make sure to define the type specifically
 as as type starting with `i`.
 
+### Matrices
+
+Typically, a multi-dimensional array would be used to represent matrices.
+
+However, ANSA has support for matrices up to 4x4 out of the box as their own
+special types. This type comes with operators which make working with matrices
+a breeze.
+
+Matrices are denoted with the type `m` and similar to the number types, they
+can be appended by one or two numbers. The first number is the row count, and
+the second number is the column count. If no column count is declared, it will
+be assumed the matrix has equal rows and columns.
+
+Note: Matrices cannot have a row or column of 1. For that case, use a Vector.
+
+- `m4` A matrix with 4 rows and 4 columns.
+- `m42` A matrix with 4 rows and 2 columns.
+- `m41` This is not valid, and a Vector should be used instead.
+
+```
+m4 transform = (1, 0, 0, 0,
+				0, 1, 1, 0,
+				1, 0, 1, 0,
+				0, 0, 0, 1);
+```
+
+Matrices can have their type, rows, and columns inferred as well.
+
+Note: Extra parentheses are required to help the compiler. This may or may
+not be worth the inference.
+
+```
+my_matrix := (3, 2, 1, 4, 4, 6);
+// => Error: Is this matrix 2x3 or 3x2?
+
+my_matrix := ((3, 2, 1), (4, 4, 6));
+type(my_matrix); // => m23
+
+m23 my_matrix = (3, 2, 1, 4, 4, 6);
+// This is actually 1 character shorter, but may be less clear at a glance!
+```
+
+In order to retrieve values from matrices, the letters `a` through `p` are
+provided as properties on every matrix.
+
+```
+my_matrix := ((1, 2, 3), (4, 5, 6), (7, 8, 9));
+
+print(my_matrix.c) // => 3
+print(my_matrix.g) // => 7
+```
+
+Also keep in mind that since matrices cannot be 1-dimensional, if you need a
+2x2, you must define it explicity or add the extra parentheses.
+
+If you fail to do so, it will be considered a Vector.
+
+```
+my_matrix := (1, 2, 3, 4);
+type(my_matrix); // => v4
+
+my_matrix := ((1, 2), (3, 4));
+type(my_matrix); // => m2
+```
+
+### Vectors
+
+Vectors are essentially 1-dimensional matrices. However, they have their own
+type, similar to matrices.
+
+Vectors can contain between 2 and 4 (inclusive) values. They can always be
+referenced using their `xyzw` properties. The order is set `x` then `y`
+then `z` and finally `w`.
+
+```
+my_vec := (3, 4.3, -1, "hello there!");
+
+print(my_vec.x); // => 3
+print(my_vec.y); // => 4.3
+print(my_vec.z); // => -1
+print(my_vec.w); // => "hello there!"
+```
+
+Vectors have special operators which make them easier to use. The
+multilplication operator `*` performs a cross product on two vectors, whereas
+the dot `.` performs a dot product.
+
+```
+my_vec_a := (2, 3, 4);
+my_vec_b := (5, -7, 3);
+
+dot := my_vec_a . my_vec_b;
+print(dot); // => 1
+
+cross := my_vec_a * my_vec_b;
+print(cross); // => (37, 14, -29)
+```
+
+Vectors can also be added and subtracted as you would expect.
+
+```
+my_vec_a := (2, 3, 4);
+my_vec_b := (5, -7, 3);
+my_vec_c := my_vec_a - my_vec_b;
+
+print(my_vec_c); // => (-3, 10, 1)
+
+print(my_vec_c + my_vec_a); // => (-1, 13, 5)
+```
+
 ### Strings
 
 The only non-numeric built in type is the string. Strings are denoted by their
 type `s` and must be surrounded with quotation marks.
 
 ```
-s greetingText = "Hello there!"
+s greeting_text = "Hello there!";
 ```
 
 They can also be inferred by the compiler using the special `:=` syntax.
 
 ```
-greetingText := "Hello there!"
+greeting_text := "Hello there!";
 ```
 
 Unlike C and some other languages, there is no `char` or `character` type.
 
 ```
-someChar := 'a'
+some_char := 'a':
 // This is NOT valid and will throw a compile error
-char someChar = 'a'
+char some_char = 'a';
 // This is NOT valid and will throw a compile error
 ```
 
@@ -106,19 +216,19 @@ is defined, it will be converted into a `u8` behind the scenes.
 This is because the string type contains an internal length counter, which is
 a `u64`.
 ```
-someChar := "a"
+some_char := "a";
 
-Type(someChar) // => "u8"
-Print(someChar) // => a
-Print(someChar) // => 61
-Size(someChar) // => 8
+type(some_char); // => "u8"
+print(some_char); // => a
+print(some_char); // => 61
+size(some_char); // => 8
 
-twoChars := "ab"
+two_chars := "ab";
 
-Print(twoChars) // => ab
-Print(twoChars.length) // => 2
-Type(twoChars.length) // => "u64"
-Size(twoChars) // => 80
+print(two_chars); // => ab
+print(two_chars.length); // => 2
+type(two_chars.length); // => "u64"
+size(two_chars); // => 80
 ```
 
 ## References
@@ -155,7 +265,7 @@ the special `&` syntax in front of the name, then we can get the address
 instead.
 
 ```
-myValue := 42
+my_value := 42;
 
 ---------------------------------
 |   A   |   B   |   C   |   D   |
@@ -163,7 +273,7 @@ myValue := 42
 |       |  42   |       |       |
 ---------------------------------
 
-Print(&myValue) // => 132
+print(&my_value); // => 132
 ```
 
 References can be declared like other values in order to pass them around. For
@@ -171,11 +281,11 @@ this, the special `*` syntax is used after the type in conjunction with the
 `&` syntax in front of the value name.
 
 ```
-i32 myValue = 42
-i32* myRef = &myValue
+i32 my_value = 42;
+i32* my_ref = &myValue;
 
-Print(&myValue) // => 150 (for example)
-Print(myRef) // => 150
+print(&my_value); // => 150 (for example)
+print(my_ref); // => 150
 
 ```
 
@@ -183,10 +293,10 @@ Using the reference, the value can be obtained by once again using the `*`
 syntax, but this time in front of the value name.
 
 ```
-i32 myValue = 42
-i32* myRef = &myValue
+i32 my_value = 42;
+i32* my_ref = &myValue;
 
-Print(*myRef) // => 42
+print(*my_ref); // => 42
 ```
 
 ## Functions
@@ -204,14 +314,14 @@ Rules:
 They can have their return type inferred.
 
 ```
-Greeting(s name) {
-	Print("Hello, %!", name)
+greeting(s name) {
+	print("Hello, %!", name);
 }
 
 // Later
 
-Main() {
-	Greeting("Sarah")
+main() {
+	greeting("Sarah");
 }
 // => "Hello, Sarah!"
 ```
