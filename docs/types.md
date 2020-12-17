@@ -1,20 +1,71 @@
 # Types
 
-The type system in ANSA allows you to build custom types from both primitives
+The type system in Ansa allows you to build custom types from both primitives
 and other custom types.
 
-```
-type myType = u32
+```c
+type MyType = u32;
 
-myType myValue = -1
-// => Compile error, as unsigned integers cannot be negative
+my_value : MyType = -1;
+// => Compile error, unsigned integers cannot be negative
 ```
 
 Let us look at a more realistic example using a record.
 
-```
-type person = { s[80] name, u8 age }
+```c
+type Person = (age u) {
+	name s;
+	age;
+}
+
+my_person := Person(4);
+
 ```
 
-You will notice that we must define the length of the string here, that is because
+```c
 
+type Sandwich = (slice_count u) {
+	name s;
+	weight f;
+	flavour Flavour;
+	slices MeatType[slice_count];
+}
+
+type Burger = (slice_count u) {
+	name s;
+	weight f;
+	flavour Flavour;
+	slices CheeseType[slice_count];
+}
+
+type Topping = CheeseType | MeatType
+
+type Taco = (topping_count u) {
+	name s;
+	weight f;
+	flavour Flavour;
+	toppings Topping[topping_count];
+}
+
+```
+
+```c
+type Food = (slices u) Burger | Sandwich
+
+type Sandwich (u number_of_meat_slices) {
+	s name;
+	f weight;
+	Flavour flavour;
+	MeatType[number_of_meat_slices] meat_slices;
+}
+
+type Burger (u number_of_cheese_slices) {
+	s name;
+	f weight;
+	Flavour flavour;
+	CheeseType[number_of_cheese_slices] cheese_slices;
+}
+
+type Food = Burger | Sandwich;
+
+```

@@ -13,9 +13,9 @@ Let's start by looking at the numeric types.
 ### Numbers
 
 ```
-u some_number = 32;
-i another_one = -1;
-f and_another = 35.5;
+some_number: u = 32;
+another_one: i = -1;
+and_another: f = 35.5;
 ```
 
 The prefixes here are telling the compiler what type of number these are.
@@ -96,7 +96,7 @@ Note: Matrices cannot have a row or column of 1. For that case, use a Vector.
 - `m41` This is not valid, and a Vector should be used instead.
 
 ```
-m4 transform = (1, 0, 0, 0,
+transform: m4 = (1, 0, 0, 0,
 				0, 1, 1, 0,
 				1, 0, 1, 0,
 				0, 0, 0, 1);
@@ -114,7 +114,7 @@ my_matrix := (3, 2, 1, 4, 4, 6);
 my_matrix := ((3, 2, 1), (4, 4, 6));
 type(my_matrix); // => m23
 
-m23 my_matrix = (3, 2, 1, 4, 4, 6);
+my_matrix: m23 = (3, 2, 1, 4, 4, 6);
 // This is actually 1 character shorter, but may be less clear at a glance!
 ```
 
@@ -191,8 +191,34 @@ print(my_vec_c + my_vec_a); // => (-1, 13, 5)
 The only non-numeric built in type is the string. Strings are denoted by their
 type `s` and must be surrounded with quotation marks.
 
+In a similar way to Integers and Floats, Strings can have their length set by
+including a numbered suffix. The difference here is that the number denotes
+the length in characters of the string, rather than the amount of bits.
+
 ```
-s greeting_text = "Hello there!";
+greeting_text: s = "Hello there!";
+
+print(s.length); // => 12;
+
+greeting_text: s20 = "Hello there!";
+print(s.length); // => 12;
+```
+
+Strings will be automatically terminated after the assignment by inserting
+the  null character `"\0"` in every remaining byte. Built-in functions
+which handle Strings will use this character to determine where the String
+ends.
+
+```
+greeting_text: s20 = "Hello there!";
+print(s); // => "Hello there!";
+
+greeting_text[12] = "_";
+print(s); // => "Hello there!_"
+```
+
+```
+for 0..3 => print(_) // => 0, 1, 2, 3
 ```
 
 They can also be inferred by the compiler using the special `:=` syntax.
@@ -281,8 +307,8 @@ this, the special `*` syntax is used after the type in conjunction with the
 `&` syntax in front of the value name.
 
 ```
-i32 my_value = 42;
-i32* my_ref = &myValue;
+my_value: i32 = 42;
+my_ref: *i32 = &myValue;
 
 print(&my_value); // => 150 (for example)
 print(my_ref); // => 150
@@ -293,8 +319,8 @@ Using the reference, the value can be obtained by once again using the `*`
 syntax, but this time in front of the value name.
 
 ```
-i32 my_value = 42;
-i32* my_ref = &myValue;
+my_value: i32 = 42;
+my_ref: *i32 = &myValue;
 
 print(*my_ref); // => 42
 ```
@@ -314,14 +340,24 @@ Rules:
 They can have their return type inferred.
 
 ```
-greeting(s name) {
+greeting :: (s name) {
 	print("Hello, %!", name);
 }
 
-// Later
-
-main() {
-	greeting("Sarah");
+main :: () {
+	greeting("Sarah"); // => "Hello, Sarah!"
 }
-// => "Hello, Sarah!"
+```
+
+Functions can also be declared in any order.
+
+
+```
+main :: () {
+	greeting("Sarah"); // => "Hello, Sarah!"
+}
+
+greeting :: (s name) {
+	print("Hello, %!", name);
+}
 ```

@@ -5,30 +5,199 @@
 - Standard library easy enough for hobbyists
 - Language core powerful enough for professionals
 
+## Functions
 
-## What language features would help in game dev?
+Functions can be denoted in the same way as other values.
 
-- Some kind of cache-line system built in which could:
-    - Tell you how many cache lines any particular dataset takes up (in editor
-    in real-time) - Suggest reorganisation of data to decrease cache misses
-    (via compiler messages or tooling)
-- Declarative asynchromous state-machine based language which is immutable
-in code but by default will always change data in-place
-- Memory automatically packed?
-     - How could that work?
+## Style 0:
 
-## Coding style is enforced by the compiler
+```c
+// param types will carry over to the following parameters
+add :: (x f, y) f {
+	return x + y;
+}
 
-As much as it may piss off some developers, having a consistent style is
-important when working in teams, especially if the powers-that-be are
-constantly putting pressure on the devs to get things done yesterday.
+// mutliple return values
+split :: (sum i) (i, i) {
+	x := sum * 4 / 9;
+	y := sum - x;
 
-indenting is 1 tab
-spaces are not allowed for indentation
+	return x, y;
+}
 
-functions are PascalCase
-types are camelCase
-variables are camelCase
+// swap two strings
+swap :: (x s, y) (s, s) => y, x;
+
+// types with properties can have constructors
+// type properties can use type inference
+type animal (legs u) {
+	legs, // will be same type as constructor
+	eyes := 2 // will become u8
+};
+
+// define an instance of animal
+myDog := animal(4);
+
+// put an animal on the stack
+myMantis := new animal(2);
+
+type fcallback (x f, y) f;
+
+// even in types with properties, the type carries down (or right)
+type point { x f, y };
+type point {
+	x f,
+	y
+};
+
+do_something :: (a f, fn (x f, y) f) {
+	b := a * fn(4, 3);
+}
+
+main :: () {
+	a := 4; // will auto to u8
+	b: f = 4;
+
+	// will fail because a is u8
+	do_something(a, (x f, y f) f {
+		return x + y;
+	});
+	
+	// same as above, but one liner
+	do_something(b, (x f, y) f => x + y);
+	do_something(b, fcallback => x + y);
+	
+	my_print_wrapper := (str s) => print;
+	
+	my_print_wrapper("Yay"); // => "Yay"
+}
+
+// any function with only 1 param can have use a shorthand _
+
+add_three :: (x f) => x + 3;
+
+results: i[];
+
+array_add(results, 3);
+array_add(results, 2);
+array_add(results, 1);
+
+for results print("% -> ", _); // => 3 -> 2 -> 1 -> 
+
+// multiple declarations on one line
+x, y, z := 42, 23, 57;
+```
+
+### Style 1:
+
+```c
+my_function := (x: float, y: float): float {
+    return x + y;
+}
+
+my_function := (x: float, y: float): float => x + y;
+
+do_something := (a: float, fn: (x: float, y: float): float) {
+	b := a * fn(3, 4);
+}
+
+main := () {
+	a: float = 4;
+	do_something(a, ((x: float, y: float): float) {
+        	return x + y;
+	});
+}
+```
+### Style 2:
+
+```c
+my_function := (float x, float y) -> float {
+	return x + y;
+}
+
+my_function := (float x, float y) -> float => x + y;
+
+do_something := (float a, fn(float x, float y) -> float) {
+	b := a * fn(3, 4);
+}
+
+main := () {
+    float a = 4;
+    do_something(a, ((float x, float y) {
+    	return x + y;
+    });
+}
+```
+
+### Style 3:
+
+```c
+float my_function(float x, float y) {
+	return x + y;
+}
+
+float my_function(float x, float y) => x + y;
+
+do_something(float a, float fn(float x, float y)) {
+	b := a * fn(4, 3);
+}
+
+main() {
+	float a = 4;
+	do_something(a, (float x, float y) {
+		return x + y;
+	});
+}
+```
+
+### Style 4:
+
+```c
+float my_function :: float x float y {
+	return x + y;
+}
+
+float my_function :: float x float y => x + y;
+
+do_something float a float fn(float x float y) {
+	b := a * fn(4, 3);
+}
+
+main() {
+	float a = 4;
+	do_something(a, (float x float y) {
+	});
+}
+```
+
+```c
+my_function float x float y {
+	return x + y;
+}
+
+my_fn float x float y => x + y;
+
+do_something float a float fn(float x float y) {
+	b := 
+}
+```
+
+```typescript
+type float = number;
+function my_function(x: float, y: float): float {
+	return x + y;
+}
+
+const my_fn = (x: float, y: float): float => x + y;
+
+function do_something(a: float, fn: (x: float, y: float) => float) {
+	let b = a * fn(4, 3);
+}
+
+let a: float = 4;
+do_something(a, my_fn);
+do_something(a, my_fn);
+```
 
 ```
 someVar := SomeFunc(notReally)
@@ -186,11 +355,13 @@ When declaring types which utilize the literal types, you must supply the maximu
 byte length in the case of number, unless your defined type uses the minimum.
 
 A type with two 32-bit floats, `x` and `y`
+
 ```
 type vector2 = { f x, f y };
 ```
 
 If you want to store 64-bit floats, you must specify
+
 ```
 type vector2 = { f64 x, f64 y };
 ```
@@ -198,6 +369,7 @@ type vector2 = { f64 x, f64 y };
 The same rule applies to signed and unsigned integers.
 
 > *A type defined as two unsigned integers `x` and `y` with values 0-255 (inc.)*
+
 ```
 type myType { u x, u y };
 
@@ -227,7 +399,8 @@ have a function which requires a v2 `type v2 = { x: 32, y: f32 };` and you feed 
 a record containing two `f32` values with the names x and y, it should still work.
 
 ```
-f some_func(
+f some_func()
+
 ```
 
 
@@ -245,10 +418,7 @@ type Vector3 = {
 	f32 y;
 	f32 z;
 }
-```
 
-##
-```
 u8 char = "b";
 u8 char = 233;
 u8 char = "beast";
@@ -293,4 +463,106 @@ u 32 unsigned 4 byte
 ## Declaring Variables
 ```
 a := 3 // Declares an integer
+```
+
+## Chunks?
+
+256 byte chunks (1 cache line)
+
+
+## Closures
+
+Yes, we need them.
+
+Contrived example.
+
+```c
+Book * best_selling_books(Book *books, int len, int threshold) {
+	Book* ret = NULL;
+	int count = 0;
+	for (int i = 0; i < len; ++i) {
+		if (books[i].sales >= threshold) {
+			ret = realloc(++count * sizeof(Book));
+			ret[count-1] = books[i];
+		}
+	}
+	return ret;
+}
+```
+
+```
+// Function version
+Book[] best_selling_books(Book[] books, int threshold) {
+	return books.filter(_.sales >= threshold);
+
+}
+
+best_selling_books = books.filter(_.sales >= threshold);
+```
+
+## Arrays have built-in functionality
+
+```
+myArray := [1, 2, 3, 4];
+
+print(myArray.filter(_ < 3)); // => [1, 2]
+print(myArray.map(_ + 1)); // => [2, 3, 4, 5]
+print(myArray.map((x) => x * 2)); // => [2, 4, 6, 8]
+print(myArray.map((item) => {
+	// do some side effect if you want
+	return item * 4;
+})); // => [4, 8, 12, 16]
+```
+
+```c
+
+type Entity {
+	id: u;
+}
+
+
+e: Entity;
+
+// type decl
+ptr: >Entity;
+// value decl
+ptr = >e;
+
+ptr: >Entity = >e;
+
+ptr := >e;
+e2: Entity = <ptr;
+
+
+my_arr: [30] i;
+
+
+for my_arr
+	print("% %", _i, _v);
+	
+	
+	
+	
+
+```
+
+## SOA by default
+
+```c
+type Entity {
+	id1 := 1;
+	id2 := 2;
+	id3 := 3;
+}
+
+entities :: [3] Entity;
+
+for entities {
+	print("entity %'s position: % % %", _i, ..._v.position);
+}
+	
+/*
+entity 0's position: 3, 4, 5
+*/
+
 ```
