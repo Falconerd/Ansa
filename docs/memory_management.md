@@ -126,7 +126,22 @@ type Graph {
 
 
 
+// better syntax... doesn't matter rn
+type Node a {
+	egdes [.] >Node;
+	data a;
+}
+type LinkedList {
+	head >Node;
+	length u32;
+	item_size u64;
+}
 
+
+type Graph {
+	nodes [.] >Node;
+	...
+}
 
 
 
