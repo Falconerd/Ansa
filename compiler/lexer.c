@@ -4,278 +4,269 @@
 #include <stdarg.h>
 #include <math.h>
 
-enum {
-	TOKEN_IDENTIFIER = 256,
-	TOKEN_NUMBER,
-	TOKEN_ELSE,
-	TOKEN_ENUM,
-	TOKEN_IF,
-	TOKEN_INTEGER,
-	TOKEN_RETURN,
-	TOKEN_SIZE,
-	TOKEN_WHILE,
-	TOKEN_ASSIGN,
-	TOKEN_CONDITION,
-	TOKEN_LOGICAL_OR,
-	TOKEN_LOGICAL_AND,
-	TOKEN_OR,
-	TOKEN_XOR,
-	TOKEN_AND,
-	TOKEN_EQ,
-	TOKEN_NE,
-	TOKEN_TL,
-	TOKEN_GT,
-	TOKEN_LTE,
-	TOKEN_GTE,
-	TOKEN_ADD,
-	TOKEN_SUB,
-	TOKEN_MUL,
-	TOKEN_DIV,
-	TOKEN_MOD,
-	TOKEN_INC,
-	TOKEN_DEC,
-	TOKEN_BREAK,
+enum token {
+	TOKEN_EOF,
+	TOKEN_ILLEGAL,
+	TOKEN_IDENT,
+	TOKEN_INT,
 	TOKEN_STRING,
 
-	TOKEN_INFER = 300,
-	TOKEN_FUNCTION_OR
+	TOKEN_SEMI,     // ;
+
+	TOKEN_ADD,      // +
+	TOKEN_SUB,      // -
+	TOKEN_MUL,      // *
+	TOKEN_DIV,      // /
+
+	TOKEN_CONST,    // ::
+	TOKEN_ASSIGN,   // =
+	TOKEN_INFER,    // :=
+
+	TOKEN_COLON,    // :
+
+	TOKEN_OBRACE,   // {
+	TOKEN_CBRACE,   // }
+	TOKEN_OBRACKET, // [
+	TOKEN_CBRACKET, // ]
+	TOKEN_OPAREN,   // (
+	TOKEN_CPAREN,   // )
+
+	TOKEN_COUNT
 };
 
-enum {
-	ERROR_UNSUPPORTED_CHARACTER_IN_IDENTIFIER,
-};
+char* tokens[TOKEN_COUNT][20];
 
-struct tokdef {
+struct value {
+	size_t line;
+	size_t column;
 	int token;
-	char* name;
+	char string[80];
 };
 
-struct tokdef* tokens = NULL;
-int token_count = 0;
+char* buf;
+size_t char_count;
 
-int line = 1;
-int col = -1;
-int token = 0;
-char* buf = NULL;
-char* c;
+// Lexer state
+size_t line;
+size_t column;
+size_t abs_pos;
 
-char* get_line(int which) {
-	char *c = &buf[0];
-	int i = 0;
-	while (i < line-1) {
-		++c;
-		if (*c == '\n')
-			i++;
-	}
-	char* ln = malloc(5000 * sizeof(char));
-	i = 0;
-	if (*c == '\n')
-		++c;
-	while (*c != '\n') {
-		ln[i] = *c;
-		++c;
-		++i;
-	}
-	ln[i+1] = '\0';
-
-	return ln;
-}
-
-const char* ERROR_REPLACE_ME = "Error. Replace me with better error message.";
-const char* ERROR_UNSUPPORTED_CHARACTER_IN_IDENTIFIER_MSG = "There seems to be an unsupported character (%c) in this idenifier. Identifiers can be any combination alphanumric character or '_'.";
-
-const char* error_msg(int type) {
-	switch (type) {
-		case ERROR_UNSUPPORTED_CHARACTER_IN_IDENTIFIER:
-			return ERROR_UNSUPPORTED_CHARACTER_IN_IDENTIFIER_MSG;
-		default:
-			return ERROR_REPLACE_ME;
+const char* token_name(enum token token) {
+	switch (token) {
+	case TOKEN_EOF: return "EOF";
+	case TOKEN_ILLEGAL: return "ILLEGAL";
+	case TOKEN_IDENT: return "IDENT";
+	case TOKEN_INT: return "INT";
+	case TOKEN_STRING: return "STRING";
+	case TOKEN_SEMI: return "SEMI";
+	case TOKEN_ADD: return "ADD";
+	case TOKEN_SUB: return "SUB";
+	case TOKEN_MUL: return "MUL";
+	case TOKEN_DIV: return "DIV";
+	case TOKEN_CONST: return "CONST";
+	case TOKEN_ASSIGN: return "ASSIGN";
+	case TOKEN_INFER: return "INFER";
+	case TOKEN_COLON: return "COLON";
+	case TOKEN_OBRACE: return "OBRACE";
+	case TOKEN_CBRACE: return "CBRACE";
+	case TOKEN_OBRACKET: return "OBRACKET";
+	case TOKEN_CBRACKET: return "CBRACKET";
+	case TOKEN_OPAREN: return "OPAREN";
+	case TOKEN_CPAREN: return "CPAREN";
+	default: return "-";
 	}
 }
 
-int line_number_length(int line) {
-	if (line >= 0 && line <= 9)
-		return 1;
-	else if (line >= 10 && line <= 99)
-		return 2;
-	else if (line >= 100 && line <= 999)
-		return 3;
-	else if (line >= 1000 && line <= 9999)
-		return 4;
+int is_space(char c) {
+	return (c == ' ' || c == '\t');
 }
 
-void error(int error_type, ...) {
-
-	const char *fmt = error_msg(error_type);
-	char arrow[256];
-	int len = col + line_number_length(line) + 1;
-	memset(arrow, '-', len*sizeof(char));
-	arrow[len] = '^';
-	arrow[len+1] = '\0';
-
-	va_list args;
-	va_start(args, error_type);
-	vfprintf(stdout, fmt, args);
-	va_end(args);
-
-	printf("\n");
-	char* content = get_line(line);
-	printf("%d| %s\n", line, content);
-
-	printf("%s\n", arrow);
-
-	printf("\n");
+int is_digit(char c) {
+	return (c >= '0' && c <= '9');
 }
 
 int is_alpha(char c) {
-	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
+	return ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'));
 }
 
-int is_number(char c) {
-	return c >= '0' && c <= '9';
+int is_alpha_(char c) {
+	return ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_');
 }
 
-void next() {
-	while (token = *c) {
-		++c;
-		++col;
+void reset_position() {
+	++line;
+	column = 0;
+}
 
-		if (token == '\n') {
-			++line;
-			col = -1;
-			while (token == ' ' || token == '\t') {
-				col++;
-				++c;
-			}
-		} else if (is_alpha(token)) {
-			char name[256];
-			int i = 0;
-			if (is_alpha(token) || is_number(token)) {
-				name[0] = token;
-				i++;
-			}
-			while (is_alpha(*c) || is_number(token)) {
-				name[i++] = *c;
-				++c;
-				++col;
-			}
-			if (*c != ':' && *c != '=' && *c != '(' && *c != ' ') {
-				error(ERROR_UNSUPPORTED_CHARACTER_IN_IDENTIFIER, *c);
-			}
-			tokens[token_count].name = calloc(i, sizeof(char));
-			strcpy(tokens[token_count].name, name);
-			tokens[token_count].name[i] = '\0';
-			tokens[token_count++].token = TOKEN_IDENTIFIER;
-			return;
-		} else if (is_number(token)) {
-			char *num = calloc(100, sizeof(char));
-			int i = 0;
-			while (is_number(*c)) {
-				num[i++] = *c;
-				++c;
-			}
-			if (!i) {
-				i = 1;
-				num[0] = token;
-			}
+struct value* next() {
+	struct value* value = malloc(sizeof(struct value));
+	char c;
+	for (int t = abs_pos; t < char_count; ++t) {
+		c = buf[t];
+		++column;
+		++abs_pos;
+		value->column = column;
+		value->line = line;
 
-			tokens[token_count].name = calloc(i, sizeof(char));
-			strcpy(tokens[token_count].name, num);
-			tokens[token_count++].token = TOKEN_NUMBER;
-			return;
-		} else if (token == '"') {
-			char* str = calloc(10000, sizeof(char));
+		switch (c) {
+		case '\n':
+			value->token = TOKEN_SEMI;
+			strcpy(value->string, ";");
+			reset_position();
+			return value;
+		case ';':
+			value->token = TOKEN_SEMI;
+			strcpy(value->string, ";");
+			return value;
+		case ':': {
+			if (buf[t+1] == ':') {
+				value->token = TOKEN_CONST;
+				strcpy(value->string, "::");
+				++abs_pos;
+				return value;
+			} else if (buf[t+1] == '=') {
+				value->token = TOKEN_INFER;
+				strcpy(value->string, ":=");
+				++abs_pos;
+				return value;
+			} else {
+				value->token = TOKEN_COLON;
+				strcpy(value->string, ":");
+				return value;
+			}
+		}
+		case '+':
+			value->token = TOKEN_ADD;
+			strcpy(value->string, "+");
+			return value;
+		case '-':
+			value->token = TOKEN_SUB;
+			strcpy(value->string, "-");
+			return value;
+		case '*':
+			value->token = TOKEN_MUL;
+			strcpy(value->string, "*");
+			return value;
+		case '/':
+			value->token = TOKEN_DIV;
+			strcpy(value->string, "/");
+			return value;
+		case '=':
+			value->token = TOKEN_ASSIGN;
+			strcpy(value->string, "=");
+			return value;
+		case '{':
+			value->token = TOKEN_OBRACE;
+			strcpy(value->string, "{");
+			return value;
+		case '}':
+			value->token = TOKEN_CBRACE;
+			strcpy(value->string, "}");
+			return value;
+		case '[':
+			value->token = TOKEN_OBRACKET;
+			strcpy(value->string, "[");
+			return value;
+		case ']':
+			value->token = TOKEN_CBRACKET;
+			strcpy(value->string, "]");
+			return value;
+		case '(':
+			value->token = TOKEN_OPAREN;
+			strcpy(value->string, "(");
+			return value;
+		case ')':
+			value->token = TOKEN_CPAREN;
+			strcpy(value->string, ")");
+			return value;
+		case '"': {
+			char d[500] = {0};
 			int i = 0;
-			while (*c != 0 && *c != token) {
-				if ('"' == *c)
-					break;
-				str[i++] = *c;
-				++c;
+			c = buf[++t];
+			while (c != '"') {
+				d[i++] = c;
+				c = buf[++t];
 			}
-			str[i] = '\0';
-			++c;
-			tokens[token_count].name = calloc(i, sizeof(char));
-			strcpy(tokens[token_count].name, str);
-			tokens[token_count++].token = TOKEN_STRING;
-			return;
-		} else if (token == ':') {
-			if (*c == '=') {
-				tokens[token_count++].token = TOKEN_INFER;
-				return;
+			value->token = TOKEN_STRING;
+			strcpy(value->string, d);
+			abs_pos += strlen(d) + 1;
+			return value;
+		}
+		default:
+			if (is_space(c)) {
+				continue;
+			} else if (is_digit(c)) {
+				char d[80] = {0};
+				int i = 0;
+				while (is_digit(c)) {
+					d[i++] = c;
+					c = buf[++t];
+				}
+				value->token = TOKEN_INT;
+				strcpy(value->string, d);
+				if (strlen(d) > 1)
+					abs_pos += strlen(d);
+				return value;
+			} else if (is_alpha(c)) {
+				char d[80] = {0};
+				int i = 0;
+				while (is_alpha_(c)) {
+					d[i++] = c;
+					c = buf[++t];
+				}
+				int len = strlen(d);
+				value->token = TOKEN_IDENT;
+				strcpy(value->string, d);
+				if (strlen(d) > 1)
+					abs_pos += strlen(d)-1;
+				return value;
 			}
-		} else if (token == '%') {
-			tokens[token_count++].token = TOKEN_MOD;
-			return;
-		} else if (token == '(' || token == ')' || token == '{' || token == '}' || token == ';' || token == '~' || token == '[' || token == ']' || token == ',') {
-			tokens[token_count++].token = token;
-			return;
 		}
 	}
+	return NULL;
 }
 
-void process() {
-	next();
-}
-
-void lexer_start(const char* filename) {
-	FILE* f = fopen(filename, "rb");
+int main() {
+	FILE *f = fopen("test.ans", "rb");
 	fseek(f, 0, SEEK_END);
-	long fsize = ftell(f);
+	size_t fsize = ftell(f);
 	fseek(f, 0, SEEK_SET);
-
 	buf = malloc(fsize + 1);
 	fread(buf, 1, fsize, f);
 	fclose(f);
-
 	buf[fsize] = 0;
+	char_count = fsize * sizeof(char);
 
-	c = &buf[0];
+	strcpy((char*)(&tokens[TOKEN_EOF]), "EOF");
+	strcpy((char*)(&tokens[TOKEN_ILLEGAL]), "ILLEGAL");
+	strcpy((char*)(&tokens[TOKEN_IDENT]), "IDENT");
+	strcpy((char*)(&tokens[TOKEN_INT]), "INT");
+	strcpy((char*)(&tokens[TOKEN_STRING]), "STRING");
+	strcpy((char*)(&tokens[TOKEN_SEMI]), ";");
+	strcpy((char*)(&tokens[TOKEN_ADD]), "+");
+	strcpy((char*)(&tokens[TOKEN_SUB]), "-");
+	strcpy((char*)(&tokens[TOKEN_MUL]), "*");
+	strcpy((char*)(&tokens[TOKEN_DIV]), "/");
+	strcpy((char*)(&tokens[TOKEN_CONST]), "::");
+	strcpy((char*)(&tokens[TOKEN_ASSIGN]), "=");
+	strcpy((char*)(&tokens[TOKEN_INFER]), ":=");
+	strcpy((char*)(&tokens[TOKEN_COLON]), ":");
+	strcpy((char*)(&tokens[TOKEN_OBRACE]), "{");
+	strcpy((char*)(&tokens[TOKEN_CBRACE]), "}");
+	strcpy((char*)(&tokens[TOKEN_OBRACKET]), "[");
+	strcpy((char*)(&tokens[TOKEN_CBRACKET]), "]");
+	strcpy((char*)(&tokens[TOKEN_OPAREN]), "(");
+	strcpy((char*)(&tokens[TOKEN_CPAREN]), ")");
 
-	tokens = calloc(fsize, sizeof(struct tokdef));
-
-	// printf("file contents(%d):\n%s\n", fsize, buf);
-
-	token = 1;
-
-	while (token > 0) {
-		process();
-	}
-
-	for (int i = 0; i < token_count; ++i) {
-		switch (tokens[i].token) {
-			case TOKEN_IDENTIFIER:
-				printf("[%s] ", tokens[i].name);
-				break;
-			case TOKEN_STRING:
-				printf("\"%s\" ", tokens[i].name);
-				break;
-			case TOKEN_INFER:
-				printf(":= ");
-				break;
-			case TOKEN_NUMBER:
-				printf("%s ", tokens[i].name);
-				break;
-			default:
-				printf("%c ", tokens[i].token);
-				break;
+	for (;;) {
+		struct value* v = next();
+		if (NULL != v) {
+			printf("%d:%d,%s,%s\n", v->line, v->column, token_name(v->token), v->string);
 		}
-		/*
-		if (tokens[i].token != TOKEN_STRING && tokens[i].token != TOKEN_IDENTIFIER)
-			printf("'%c' ", tokens[i].token);
-		if (tokens[i].name)
-			printf("'%s' ", tokens[i].name);
-		*/
-		if (i + 1 != token_count)
-			printf("-> ");
+		if (abs_pos == char_count)
+			break;
 	}
-	printf("\n");
-}
 
-int main(int argc, char* argv[]) {
-	if (2 == argc) {
-		lexer_start(argv[1]);
-	} else {
-		printf("usage: lexer filename\n");
-	}
 	return 0;
 }
+

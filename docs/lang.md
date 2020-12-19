@@ -550,19 +550,21 @@ for my_arr
 
 ```c
 type Entity {
-	id1 := 1;
-	id2 := 2;
-	id3 := 3;
+	id1 := 1
+	id2 := 2
+	id3 := 3
 }
 
-entities :: [3] Entity;
+my_entity : Entity
+entities :: [3] Entity
 
-for entities {
-	print("entity %'s position: % % %", _i, ..._v.position);
-}
+print("% % %\n", my_entity.id1, my_entity.id2, my_entity.id3)
+for entities print("% % %\n", ..._v)
 	
 /*
-entity 0's position: 3, 4, 5
+1, 2, 3
+1, 1, 1
+2, 2, 2
+3, 3, 3
 */
-
 ```
