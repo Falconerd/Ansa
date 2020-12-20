@@ -1,3 +1,8 @@
 main :: () {
     a := 5
+    b : i = 2
+    if b < a
+        print("b < a")
+    else
+    	print("b > a")
 }

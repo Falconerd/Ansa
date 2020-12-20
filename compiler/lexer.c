@@ -31,6 +31,9 @@ enum token {
 	TOKEN_OPAREN,   // (
 	TOKEN_CPAREN,   // )
 
+	TOKEN_LT, // <
+	TOKEN_GT, // >
+
 	TOKEN_COUNT
 };
 
@@ -73,6 +76,8 @@ const char* token_name(enum token token) {
 	case TOKEN_CBRACKET: return "CBRACKET";
 	case TOKEN_OPAREN: return "OPAREN";
 	case TOKEN_CPAREN: return "CPAREN";
+	case TOKEN_LT: return "LT";
+	case TOKEN_GT: return "GT";
 	default: return "-";
 	}
 }
@@ -179,6 +184,14 @@ struct value* next() {
 			value->token = TOKEN_CPAREN;
 			strcpy(value->string, ")");
 			return value;
+		case '<':
+			value->token = TOKEN_LT;
+			strcpy(value->string, "<");
+			return value;
+		case '>':
+			value->token = TOKEN_GT;
+			strcpy(value->string, ">");
+			return value;
 		case '"': {
 			char d[500] = {0};
 			int i = 0;
@@ -257,6 +270,8 @@ int main() {
 	strcpy((char*)(&tokens[TOKEN_CBRACKET]), "]");
 	strcpy((char*)(&tokens[TOKEN_OPAREN]), "(");
 	strcpy((char*)(&tokens[TOKEN_CPAREN]), ")");
+	strcpy((char*)(&tokens[TOKEN_GT]), ">");
+	strcpy((char*)(&tokens[TOKEN_LT]), "<");
 
 	for (;;) {
 		struct value* v = next();

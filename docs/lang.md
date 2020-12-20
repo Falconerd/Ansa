@@ -539,10 +539,7 @@ my_arr: [30] i;
 
 for my_arr
 	print("% %", _i, _v);
-	
-	
-	
-	
+
 
 ```
 
@@ -567,4 +564,11 @@ for entities print("% % %\n", ..._v)
 2, 2, 2
 3, 3, 3
 */
+```
+
+## Blank identifier
+
+```
+
+my_fn(_, b);
 ```
