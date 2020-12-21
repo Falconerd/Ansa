@@ -47,40 +47,42 @@ struct ast_node {
 		uint64_t uval;
 		char* sval;
 	};
-	// if part of the same subtree, has direct access to neighbour
-	//struct ast_node* neighbour;
+	int is_lval;
+	int is_rval;
+	struct ast_node* parent;
 	int child_count;
 	struct ast_node* children;
 	int arg_count;
 	struct ast_node* args;
 };
 
-enum ast_state {
-	AST_STATE_IDLE,
-	AST_STATE_DEFINING_MAIN,
-	AST_STATE_DEFINING_FUNCTION_CALL_ARGUMENTS
-};
+char AST_STATE_DEFINING_MAIN = 0;
+char AST_STATE_DEFINING_MAIN_BODY = 0;
+char AST_STATE_DEFINING_FUNCTION_CALL_ARGUMENTS = 0;
+char AST_STATE_DEFINING_FUNCTION_BODY = 0;
 
 char* buf;
 size_t char_count;
-size_t line_count;
+size_t line_count = 1;
 
 // @TODO: Support more than 500 tokens
 size_t line_starts[500] = {0};
 size_t line_lengths[500] = {0};
 
 // State
-char* c;
-size_t t = 0;
 size_t line = 0;
 size_t oparen_count = 0;
-
-enum ast_state state;
+size_t obrace_count = 0;
 
 struct ast_node* tree_head;
 struct ast_node* tree_curr;
 struct ast_node* list_head;
 struct ast_node* list_tail;
+
+void set_line(int value) {
+	//printf("\n -- line : %d -> %d -- \n", line, value);
+	line = value;
+}
 
 void print_ast_node(struct ast_node* n) {
 	switch (n->type) {
@@ -112,14 +114,23 @@ void print_ast_node(struct ast_node* n) {
 		printf(")");
 	} break;
 	case AST_SKIP: printf("SKIP"); break;
+	default: printf("%d", n->type); break;
 	}
 }
 
-void split_line(char* linecol, char* type, char* value, char* str) {
+void split_line(char* linecol, char* type, char* value, size_t start) {
 	const char s[2] = ",";
 	char* tok;
+	// @TODO malloc
+	char copy[500];
+	char* pos = &buf[start];
+	char* cursor = &copy[0];
+	while (*pos != '\n')
+		*cursor++ = *pos++;
 
-	tok = strtok(c, s);
+	*cursor = '\n';
+
+	tok = strtok(copy, s);
 	strcpy(linecol, tok);
 
 	tok = strtok(NULL, s);
@@ -127,18 +138,18 @@ void split_line(char* linecol, char* type, char* value, char* str) {
 
 	tok = strtok(NULL, "\n");
 	strcpy(value, tok);
+
+	// printf("linecol: %s, type: %s, value: %s\n", linecol, type, value);
 }
 
 int next_type_matches(const char* pattern) {
-	int line_start = line_starts[line];
-	char* start = &buf[line_start];
-	char l[200] = {0};
-	int i = 0;
-	while ('\n' != *start) {
-		l[i] = *start++;
-	}
+	char* linecol = malloc(sizeof(char) * 100);
+	char* type = malloc(sizeof(char) * 100);
+	char* value = malloc(sizeof(char) * 100);
 
-	return NULL != strstr(l, pattern);
+	split_line(linecol, type, value, line_starts[line+1]);
+
+	return NULL != strstr(value, pattern);
 }
 
 enum ast_node_type get_type(const char* s, const char* v) {
@@ -147,25 +158,30 @@ enum ast_node_type get_type(const char* s, const char* v) {
 	} else if (*v == '>') {
 		return AST_OP_GT;
 	} else if (*v == ')') {
+		// @TODO nested func calls
 		--oparen_count;
-		if (0 == oparen_count && state == AST_STATE_DEFINING_FUNCTION_CALL_ARGUMENTS) {
-			state == AST_STATE_IDLE;
+		if (0 == oparen_count && AST_STATE_DEFINING_FUNCTION_CALL_ARGUMENTS) {
+			AST_STATE_DEFINING_FUNCTION_CALL_ARGUMENTS = 0;
 		}
+		return AST_SKIP;
 	} else if (0 == strcmp(s, "IDENT")) {;
 		if (0 == strcmp(v, "main")) {
-			state = AST_STATE_DEFINING_MAIN;
+			AST_STATE_DEFINING_MAIN = 1;
 			return AST_ENTRY;
 		} else if (0 == strcmp(v, "if")) {
 			return AST_IF;
 		} else if (next_type_matches("(")) {
-			state =  AST_STATE_DEFINING_FUNCTION_CALL_ARGUMENTS;
+			AST_STATE_DEFINING_FUNCTION_CALL_ARGUMENTS = 1;
 			++oparen_count;
 			return AST_FUNCCALL;
 		}
 		return AST_VAR;
 	} else if (0 == strcmp(s, "CONST")) {
-		if (state == AST_STATE_DEFINING_MAIN) {
-			state = AST_STATE_IDLE;
+		if (AST_STATE_DEFINING_MAIN) {
+			AST_STATE_DEFINING_MAIN = 0;
+			AST_STATE_DEFINING_FUNCTION_BODY = 1;
+			AST_STATE_DEFINING_MAIN_BODY = 1;
+			obrace_count++;
 			return AST_SKIP;
 		} else {
 			return AST_CONST;
@@ -187,21 +203,22 @@ enum ast_node_type get_type(const char* s, const char* v) {
 
 struct ast_node* next() {
 	struct ast_node* node = calloc(1, sizeof(struct ast_node));
-	t = line_starts[line++];
-	c = &buf[t];
+	set_line(line+1);
 	char* linecol = malloc(sizeof(char) * 100);
 	char* type = malloc(sizeof(char) * 100);
 	char* value = malloc(sizeof(char) * 100);
 
-	split_line(linecol, type, value, c);
+	split_line(linecol, type, value, line_starts[line]);
 
 	node->type = get_type(type, value);
 	switch (node->type) {
 	case AST_STRING: {
 		node->value_type = AST_VALUE_STRING;
 		node->sval = value;
+		node->is_lval = 1;
 	} break;
 	case AST_NUMBER: {
+		node->is_lval = 1;
 		if (strchr(value, '.')) {
 			// float of some kind?
 			// @TODO Get locale and reset after
@@ -222,6 +239,7 @@ struct ast_node* next() {
 	case AST_VAR: {
 		node->value_type = AST_VALUE_STRING;
 		node->sval = value;
+		node->is_lval = 1;
 	} break;
 	case AST_FUNCCALL: {
 		node->value_type = AST_FUNCCALL;
@@ -256,6 +274,22 @@ struct ast_node* next() {
 	return node;
 }
 
+struct ast_node* peek() {
+	struct ast_node* node = next();
+	//printf("|> %d\n", node->type);
+	set_line(line-1);
+	return node;
+}
+
+enum ast_node_type last_node_type = AST_INVALID;
+
+char* lines;
+
+struct ast_node* current_function_node = NULL;
+
+void print_ast() {
+}
+
 int main(int argc, char* argv[]) {
 	// FILE *f = fopen(argv[1], "rb");
 	FILE *f = fopen("./out.l", "rb");
@@ -281,16 +315,34 @@ int main(int argc, char* argv[]) {
 
 	// build tree
 	//for (int i = 0; i < line_count; ++i) {
-	while (line < line_count) {
+	while (line < line_count - 1) {
+		int was_defining_function_body = AST_STATE_DEFINING_FUNCTION_BODY;
 		struct ast_node* node = next();
+
+		if (!was_defining_function_body && AST_STATE_DEFINING_FUNCTION_BODY) {
+			current_function_node = node;
+		}
+
 		if (node->type == AST_ENTRY) {
 			tree_head = node;
 			tree_curr = tree_head;
 		} else {
 			if (node->type == AST_INVALID || node->type == AST_SKIP) continue;
-			print_ast_node(node);
-			printf(" -> ");
+
+
+			struct ast_node* next_node = peek();
+			// this is not lval or rval
+			if (!next_node->is_lval && !next_node->is_rval) {
+			}
+			// if this node is a LVAL
+			// and next node is an op
+			// (and/and not) we are inside a function
+			if (current_function_node) {
+				//current_function_node->child_count
+			}
 		}
+		print_ast_node(node);
+		printf(" -> ");
 	}
 
 	printf("\n");

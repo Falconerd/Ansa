@@ -572,3 +572,26 @@ for entities print("% % %\n", ..._v)
 
 my_fn(_, b);
 ```
+
+
+## Array Remove
+
+When iterating over an array in a for loop, the remove instruction can be
+used to do an unordered remove from the array without breaking the loop.
+
+The last element in the array will be put into the index of the removed
+element, and the array length will be decreased by one.
+
+```
+my_arr := [1, 2, 3, 4, 5]
+
+print(my_arr.length) // => 5
+
+for my_arr {
+	if (_v == 3)
+		remove
+}
+
+print(my_arr) // => [1, 2, 5, 4]
+print(my_arr.length) // => 4
+```
