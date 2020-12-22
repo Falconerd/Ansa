@@ -595,3 +595,12 @@ for my_arr {
 print(my_arr) // => [1, 2, 5, 4]
 print(my_arr.length) // => 4
 ```
+
+Language implemented procedures begin with `@` to prevent naming collisions.
+
+```c
+my_var := 35
+
+@size(my_var) // => 1
+@type(my_var) // => u8
+```
