@@ -1,5 +1,10 @@
+#include <stdio.h>
 #include <inttypes.h>
-#include "./lexer.c"
+#include <stdlib.h>
+#include <string.h>
+#include "./list.h"
+#include "./lexer.h"
+#include "./parser.h"
 
 uint8_t *src = NULL;
 
@@ -8,6 +13,7 @@ int main(int argc, const char* argv[]) {
 	puts("Compiler: Let us try and open the provided file and put it into a buffer...");
 	//FILE *f = fopen(argv[1], "rb");
 	FILE *f = fopen("./test.ans", "rb");
+	//FILE *f = fopen("./stb_image.h", "rb");
 	size_t bufsize;
 	if (NULL != f) {
 		if (fseek(f, 0L, SEEK_END) == 0) {
@@ -36,5 +42,9 @@ int main(int argc, const char* argv[]) {
 
 	puts("Now let us run the lexer on it and see what we can make of it.");
 
-	lex(src, bufsize);
+	List* token_list = lex(src, bufsize);
+
+	puts("Okay, great. Let us run this list through the parser to make an Abstract Syntax Tree.");
+
+	parse(token_list);
 }
