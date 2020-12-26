@@ -13,7 +13,6 @@
 #include <time.h>
 #include <assert.h>
 #include "./list.h"
-
 #include "./lexer.h"
 
 #define WHITESPACE \
@@ -159,7 +158,7 @@ static const char* token_name(Token* token) {
 	return "Invalid";
 }
 
-static void print_tokens(const uint8_t* buf, List* token_list) {
+static void print_tokens(const char* buf, List* token_list) {
 	for (int i = 0; i < token_list->length; ++i) {
 		Token* token = list_at(token_list, i);
 		printf("%s ", token_name(token));
@@ -168,7 +167,17 @@ static void print_tokens(const uint8_t* buf, List* token_list) {
 	}
 }
 
-List* lex(const uint8_t* buf, size_t bufsize) {
+static void add_values_to_tokens(const char* buf, List* token_list) {
+	for (int i = 0; i < token_list->length; ++i) {
+		Token* token = list_at(token_list, i);
+		uint64_t length = (token->end - token->start);
+		size_t size = length * sizeof(char);
+		token->value = calloc(length, sizeof(char));
+		memcpy(token->value, &buf[0]+token->start, size);
+	}
+}
+
+List* lex(const char* buf, size_t bufsize) {
 	clock_t start_time, end_time;
 	start_time = clock();
 	Context x = {0};
@@ -177,7 +186,7 @@ List* lex(const uint8_t* buf, size_t bufsize) {
 	x.token_list = malloc(sizeof(List));
 	memcpy(x.token_list, &l, sizeof(List));
 	for (x.pos = 0; x.pos < bufsize; ++x.pos) {
-		uint8_t c = buf[x.pos];
+		char c = buf[x.pos];
 		switch (x.state) {
 		case state_start:
 			switch (c) {
@@ -377,6 +386,8 @@ List* lex(const uint8_t* buf, size_t bufsize) {
 	puts("Done lexing, here is what we got:");
 	printf("Lines: %lu, Tokens: %lu, Time taken: %f\n", x.line, x.token_list->length, ((double) (end_time - start_time)) / CLOCKS_PER_SEC);
 	print_tokens(buf, x.token_list);
+
+	add_values_to_tokens(buf, x.token_list);
 
 	return x.token_list;
 }

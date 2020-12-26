@@ -1,5 +1,6 @@
 #ifndef lexer_h_INCLUDED
 #define lexer_h_INCLUDED
+#include <stddef.h>
 #include "./list.h"
 
 typedef enum token_type {
@@ -51,8 +52,9 @@ typedef struct token {
 	uint64_t end;
 	uint64_t line;
 	uint64_t column;
+	char* value;
 } Token;
 
-List* lex(const uint8_t* buf, size_t bufsize);
+List* lex(const char* buf, size_t bufsize);
 #endif
 

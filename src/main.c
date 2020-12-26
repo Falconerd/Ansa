@@ -46,5 +46,5 @@ int main(int argc, const char* argv[]) {
 
 	puts("Okay, great. Let us run this list through the parser to make an Abstract Syntax Tree.");
 
-	parse(token_list);
+	parse(token_list, src);
 }
